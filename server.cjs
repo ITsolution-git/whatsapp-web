@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 const PORT = process.env.PORT || 5173;
-const DIST = path.join(__dirname, 'dist');
+const DIST = path.resolve(__dirname, 'dist');
 
 const mime = {
   '.html': 'text/html',
@@ -20,10 +20,21 @@ const mime = {
 
 http.createServer((req, res) => {
   const pathname = new URL(req.url, 'http://localhost').pathname;
-  let filePath = path.join(DIST, pathname);
+  const decoded = decodeURIComponent(pathname || '');
 
-  if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
-    filePath = path.join(DIST, 'index.html');
+  // Resolve requested path relative to the dist folder. Prepending '.' prevents
+  // absolute request paths (like '/login') from escaping the `DIST` root.
+  const distResolved = DIST;
+  let filePath = path.resolve(distResolved, '.' + decoded);
+
+  // If the resolved path is outside the dist folder, or the file doesn't exist
+  // (including requests for SPA routes like /login), fall back to index.html.
+  if (filePath === distResolved || filePath.startsWith(distResolved + path.sep)) {
+    if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
+      filePath = path.join(distResolved, 'index.html');
+    }
+  } else {
+    filePath = path.join(distResolved, 'index.html');
   }
 
   const ext = path.extname(filePath);
