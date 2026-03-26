@@ -5,7 +5,12 @@ export async function getOrCreateDmRoom(subscriberId: string): Promise<string> {
   const existing = await db.dms.where('subscriberId').equals(subscriberId).first();
   if (existing) return existing.roomId;
 
-  const roomId = crypto.randomUUID();
+  const roomId = (typeof crypto !== 'undefined' && crypto.randomUUID)
+    ? crypto.randomUUID()
+    : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+        const r = (Math.random() * 16) | 0;
+        return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+      });
   await db.transaction('rw', db.rooms, db.dms, async () => {
     await db.rooms.put({ id: roomId, type: 'dm', lastActiveAt: Date.now(), archived: 0 });
     await db.dms.add({ roomId, subscriberId });
