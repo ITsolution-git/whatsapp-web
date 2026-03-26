@@ -50,7 +50,10 @@ export default function LoginPage() {
       const res = await api.verify(phoneNumber.trim(), otp.trim(), undefined, deviceId, 'web')
       const { token, subscriber } = res
       if (!token) throw new Error('No token received')
-      await upsertSubscriber(subscriber)
+      await upsertSubscriber({
+        ...subscriber,
+        lastSeenAt: subscriber.lastSeenAt ? new Date(subscriber.lastSeenAt).getTime() : undefined,
+      })
       setAuth(token, { ...subscriber, createdAt: subscriber.createdAt ?? '' })
       navigate('/', { replace: true })
     } catch (err: unknown) {
